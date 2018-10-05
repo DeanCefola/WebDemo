@@ -1,0 +1,649 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Prefix": {
+      "type": "string",
+      "defaultValue": "z99"
+    },
+    "Instance": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 4,
+      "defaultValue": 1
+    },
+    "VMSize": {
+      "type": "string",
+      "defaultValue": "Standard_F2s_v2",
+      "allowedValues": [
+        "Standard_F2s_v2",
+        "Standard_B1ms",
+        "Standard_D2"
+      ]
+    },
+    "AdminUserName": {
+      "type": "string"
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    },
+    "OperatingSystem": {
+      "type": "string",
+      "defaultValue": "Windows",
+      "allowedValues": [
+        "Windows",
+        "Linux"
+      ]
+    }
+  },
+  "variables": {
+    "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', concat(parameters('Prefix'),'-WebDemo-vNET'))]",
+    "WebsubnetRef": "[concat(variables('vnetId'), '/subnets/', 'Web')]",
+    "AppsubnetRef": "[concat(variables('vnetId'), '/subnets/', 'App')]",
+    "DatabasesubnetRef": "[concat(variables('vnetId'), '/subnets/', 'Database')]",
+    "fileUris": "https://azureacademydiag597.blob.core.windows.net/demo/AA-Install_IIS.ps1",
+    "arguments": " ",
+    "UriFileNamePieces": "[split(variables('fileUris'), '/')]",
+    "firstFileNameString": "[variables('UriFileNamePieces')[sub(length(variables('UriFileNamePieces')), 1)]]",
+    "firstFileNameBreakString": "[split(variables('firstFileNameString'), '?')]",
+    "firstFileName": "[variables('firstFileNameBreakString')[0]]",
+    "AVSetInfo": [
+      {
+        "AVSetName": "[concat(parameters('Prefix'), '-AVSetWeb')]"
+      },
+      {
+        "AVSetName": "[concat(parameters('Prefix'), '-AVSetApp')]"
+      },
+      {
+        "AVSetName": "[concat(parameters('Prefix'), '-AVSetDB')]"
+      }
+    ],
+    "VM_Images": {
+      "Windows": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      },
+      "Linux": {
+        "publisher": "SUSE",
+        "offer": "SLES",
+        "sku": "12-SP3",
+        "version": "latest"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[concat(parameters('Prefix'),'-WebDemo-vNET')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Virtual Network"
+      },
+      "copy": {
+        "name": "vNET-Copy",
+        "count": 1
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "Web",
+            "properties": {
+              "addressPrefix": "10.0.0.0/26"
+            }
+          },
+          {
+            "name": "App",
+            "properties": {
+              "addressPrefix": "10.0.0.64/26"
+            }
+          },
+          {
+            "name": "Database",
+            "properties": {
+              "addressPrefix": "10.0.0.128/26"
+            }
+          }
+        ],
+        "virtualNetworkPeerings": [],
+        "enableDdosProtection": false,
+        "enableVmProtection": false
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "[variables('AVSetInfo')[copyIndex()].AVSetName]",
+      "apiVersion": "2016-04-30-preview",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "AVSet-Copy",
+        "count": "[length(variables('AVSetInfo'))]"
+      },
+      "tags": {
+        "displayName": "Availability Set"
+      },
+      "sku": {
+        "name": "Aligned"
+      },
+      "properties": {
+        "platformUpdateDomainCount": 5,
+        "platformFaultDomainCount": 2
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(parameters('Prefix'),'-Web-PIP')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web PIP"
+      },
+      "sku": {
+        "name": "Basic"
+      },
+      "copy": {
+        "name": "PIP-Copy",
+        "count": "[length(variables('AVSetInfo'))]"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "publicIPAddressVersion": "IPv4"
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[concat(parameters('Prefix'),'-Web-ILB')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-02-01",
+      "tags": {
+        "displayName": "Web ILB"
+      },
+      "sku": {
+        "name": "Basic",
+        "tier": "Regional"
+      },
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "type": "Microsoft.Network/loadBalancers/frontendIPConfigurations",
+            "name": "LoadBalancerFrontEnd",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/publicIPAddresses/',parameters('Prefix'),'-Web-PIP')]"
+              },
+              "loadBalancingRules": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/loadBalancingRules/Web-Rule1')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "Web-BackEndPool",
+            "properties": {
+              "loadBalancingRules": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/loadBalancingRules/Web-Rule1')]"
+                }
+              ]
+            },
+            "type": "Microsoft.Network/loadBalancers/backendAddressPools"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "type": "Microsoft.Network/loadBalancers/loadBalancingRules",
+            "name": "Web-Rule1",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+              },
+              "frontendPort": 80,
+              "backendPort": 80,
+              "enableFloatingIP": false,
+              "idleTimeoutInMinutes": 4,
+              "protocol": "Tcp",
+              "loadDistribution": "Default",
+              "backendAddressPool": {
+                "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/backendAddressPools/Web-BackEndPool')]"
+              },
+              "probe": {
+                "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/probes/Web-Probe')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "Web-Probe",
+            "properties": {
+              "protocol": "Tcp",
+              "port": 80,
+              "intervalInSeconds": 5,
+              "numberOfProbes": 2,
+              "loadBalancingRules": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/loadBalancingRules/Web-Rule1')]"
+                }
+              ]
+            },
+            "type": "Microsoft.Network/loadBalancers/probes"
+          }
+        ],
+        "inboundNatRules": [
+
+        ],
+        "inboundNatPools": [
+
+        ]
+      },
+      "dependsOn": [
+        "PIP-Copy"
+      ]
+
+    },
+    {
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "name": "[concat(parameters('Prefix'),'-Web-ASG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web ASG"
+      },
+      "copy": {
+        "name": "Web-ASG-Copy",
+        "count": 1
+      },
+      "properties": {
+
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('Prefix'),'-Web-NSG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "Web-NSG-Copy",
+        "count": 1
+      },
+      "tags": {
+        "displayName": "Web NSG"
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "name": "ALLOW-Web-Inbound",
+            "properties": {
+              "description": "Allow Web Inbound Port 80",
+              "protocol": "TCP",
+              "sourcePortRange": "80",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "Web-ASG-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('Prefix'),'-WebVM',copyIndex(),'-nic')]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web Nics"
+      },
+      "copy": {
+        "name": "WebNIC-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('WebsubnetRef')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/loadBalancers/',parameters('Prefix'),'-Web-ILB/backendAddressPools/Web-BackEndPool')]"
+                }
+              ],
+              "applicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ],
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]        
+      },
+      "dependsOn": [
+        "vNET-Copy",
+        "Web-NSG-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('Prefix'),'-WebVM',copyIndex())]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web Servers"
+      },
+      "copy": {
+        "name": "WebVM-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('Prefix'),'-AVSetWeb'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', 'azureacademydiag597', '.blob.core.windows.net/')]"
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('Prefix'),'-WebVM',copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVmAgent": "true"
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VM_Images')[parameters('OperatingSystem')].publisher]",
+            "offer": "[variables('VM_Images')[parameters('OperatingSystem')].offer]",
+            "sku": "[variables('VM_Images')[parameters('OperatingSystem')].sku]",
+            "version": "[variables('VM_Images')[parameters('OperatingSystem')].version]"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('Prefix'),'-WebVM',copyIndex(),'-OSDisk')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('Prefix'),'-WebVM',copyIndex(),'-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "[if(equals(variables('VM_IMAGES')[parameters('OperatingSystem')],'Windows'), 'Windows_Server',json('null'))]"
+      },
+      "dependsOn": [
+        "WebNIC-Copy",
+        "AVSet-Copy"
+      ],
+      "resources": [
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('Prefix'),'-WebVM',copyIndex(),'/CustomScriptExtension')]",
+          "apiVersion": "2015-06-15",
+          "location": "[resourceGroup().location]",
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.7",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": "[split(variables('fileUris'), ' ')]"
+            },
+            "protectedSettings": {
+              "commandToExecute": "[concat ('powershell -ExecutionPolicy Unrestricted -File ', variables('firstFileName'), ' ', variables('arguments'))]"
+            }
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines',concat(parameters('Prefix'),'-WebVM',copyIndex()))]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('Prefix'),'-AppVM',copyIndex(),'-nic')]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "App Nics"
+      },
+      "copy": {
+        "name": "AppNIC-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('AppsubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "vNET-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('Prefix'),'-AppVM',copyIndex())]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "App Servers"
+      },
+      "copy": {
+        "name": "AppVM-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('Prefix'),'-AVSetApp'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', 'azureacademydiag597', '.blob.core.windows.net/')]"
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('Prefix'),'-AppVM',copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVmAgent": "true"
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VM_Images')[parameters('OperatingSystem')].publisher]",
+            "offer": "[variables('VM_Images')[parameters('OperatingSystem')].offer]",
+            "sku": "[variables('VM_Images')[parameters('OperatingSystem')].sku]",
+            "version": "[variables('VM_Images')[parameters('OperatingSystem')].version]"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('Prefix'),'-AppVM',copyIndex(),'-OSDisk')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('Prefix'),'-AppVM',copyIndex(),'-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "[if(equals(variables('VM_IMAGES')[parameters('OperatingSystem')],'Windows'), 'Windows_Server',json('null'))]"
+      },
+      "dependsOn": [
+        "AppNIC-Copy",
+        "AVSet-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex(),'-nic')]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "DB Nics"
+      },
+      "copy": {
+        "name": "DBNIC-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('DatabasesubnetRef')]"
+              },
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "vNET-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex())]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "DB Servers"
+      },
+      "copy": {
+        "name": "DBVM-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('Prefix'),'-AVSetDB'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', 'azureacademydiag597', '.blob.core.windows.net/')]"
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('Prefix'),'-DBVM',copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVmAgent": "true"
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VM_Images')[parameters('OperatingSystem')].publisher]",
+            "offer": "[variables('VM_Images')[parameters('OperatingSystem')].offer]",
+            "sku": "[variables('VM_Images')[parameters('OperatingSystem')].sku]",
+            "version": "[variables('VM_Images')[parameters('OperatingSystem')].version]"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex(),'-OSDisk')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('Prefix'),'-DBVM',copyIndex(),'-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "[if(equals(variables('VM_IMAGES')[parameters('OperatingSystem')],'Windows'), 'Windows_Server',json('null'))]"
+      },
+      "dependsOn": [
+        "DBNIC-Copy",
+        "AVSet-Copy"
+      ]
+    }
+  ],
+  "outputs": {
+    "AdminName": {
+      "type": "string",
+      "value": "[parameters('AdminUserName')]"
+    }
+  }
+}

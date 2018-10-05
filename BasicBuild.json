@@ -1,0 +1,223 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "TierName": {
+      "type": "string",
+      "allowedValues": [
+        "Web",
+        "App",
+        "Database"
+      ],
+      "defaultValue": "Web"
+    },
+    "Instance": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 4,
+      "defaultValue": 1
+    },
+    "VMSize": {
+      "type": "string",
+      "defaultValue": "Standard_F2s_v2",
+      "allowedValues": [
+        "Standard_F2s_v2",
+        "Standard_B1ms",
+        "Standard_D2"
+      ]
+    },
+    "AdminUserName": {
+      "type": "string"
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    },
+    "OperatingSystem": {
+      "type": "string",
+      "defaultValue": "Windows",
+      "allowedValues": [
+        "Windows",
+        "Linux"
+      ]
+    }
+
+  },
+  "variables": {
+    "virtualMachineName": "[concat(parameters('TierName'),'VM')]",
+    "vnetId": "[resourceId('AA-WebDemo','Microsoft.Network/virtualNetworks', 'AA-WebDemo-vNET')]",
+    "subnetRef": "[concat(variables('vnetId'), '/subnets/', 'default')]",
+    "VM_Images": {
+      "Windows": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      },
+      "Linux": {
+        "publisher": "SUSE",
+        "offer": "SLES",
+        "sku": "12-SP3",
+        "version": "latest"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "AA-WebDemo-vNET",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Virtual Network"
+      },
+      "copy": {
+        "name": "vNET-Copy",
+        "count": 1
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24"
+            }
+          }
+        ],
+        "virtualNetworkPeerings": [],
+        "enableDdosProtection": false,
+        "enableVmProtection": false
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/availabilitySets",
+      "sku": {
+        "name": "Aligned"
+      },
+      "name": "[concat('AA-',parameters('TierName'),'-AVSet')]",
+      "apiVersion": "2017-12-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Availability Set"        
+      },
+      "copy": {
+        "name": "AvSet-Copy",
+        "count": 1
+      },
+      "properties": {
+        "platformFaultDomainCount": 2,
+        "platformUpdateDomainCount": 5
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(variables('virtualMachineName'),copyIndex(),'-nic')]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Network Interface"
+      },
+      "copy": {
+        "name": "NIC-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },              
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]        
+      },
+      "dependsOn": [
+        "vNET-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(variables('virtualMachineName'),copyIndex())]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Virtual Machine"
+      },
+      "copy": {
+        "name": "VM-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', concat('AA-',parameters('TierName'),'-AVSet'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', 'azureacademydiag597', '.blob.core.windows.net/')]"
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('VMSize')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('virtualMachineName'),copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVmAgent": "true"
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('VM_Images')[parameters('OperatingSystem')].publisher]",
+            "offer": "[variables('VM_Images')[parameters('OperatingSystem')].offer]",
+            "sku": "[variables('VM_Images')[parameters('OperatingSystem')].sku]",
+            "version": "[variables('VM_Images')[parameters('OperatingSystem')].version]"
+          },
+          "osDisk": {            
+            "name": "[concat(variables('virtualMachineName'),copyIndex(),'-OSDisk')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('virtualMachineName'),copyIndex(),'-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "[if(equals(variables('VM_IMAGES')[parameters('OperatingSystem')],'Windows'), 'Windows_Server',json('null'))]"
+      },
+      "dependsOn": [
+        "NIC-Copy",
+        "AVSet-Copy"
+      ]
+    }
+  ],
+  "outputs": {
+    "AdminName": {
+      "type": "string",
+      "value": "[parameters('AdminUserName')]"
+    }
+  }
+}
