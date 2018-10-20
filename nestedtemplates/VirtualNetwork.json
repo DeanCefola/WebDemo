@@ -1,0 +1,499 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Prefix": {
+      "type": "string"
+    },
+    "IPAddress_Space": {
+      "type": "string"
+    }        
+  },
+  "variables": {
+    "vNET_Info": [
+      {
+        "vNET_Name": "[concat(parameters('Prefix'), '-WebDemo-vNET')]",
+        "vNET_AddressSpace": "[concat(parameters('IPAddress_Space'),'.0.0/16')]",        
+        "vNET_Subnet_WEB_Name": "Web",
+        "vNET_Subnet_WEB_CIDR": "[concat(parameters('IPAddress_Space'),'.0.128/27')]",
+        "vNET_Subnet_WEB_NSG": "[concat(parameters('Prefix'), '-Web-NSG')]",
+        "vNET_Subnet_APP_Name": "App",
+        "vNET_Subnet_APP_CIDR": "[concat(parameters('IPAddress_Space'),'.0.160/27')]",
+        "vNET_Subnet_App_NSG": "[concat(parameters('Prefix'), '-App-NSG')]",
+        "vNET_Subnet_DB_Name": "Database",
+        "vNET_Subnet_DB_CIDR": "[concat(parameters('IPAddress_Space'),'.0.192/27')]",
+        "vNET_Subnet_DB_NSG": "[concat(parameters('Prefix'), '-Database-NSG')]"
+      }
+    ]
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "name": "[concat(parameters('Prefix'),'-Web-ASG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web ASG"
+      },
+      "copy": {
+        "name": "Web-ASG-Copy",
+        "count": 1
+      },
+      "properties": {
+
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "name": "[concat(parameters('Prefix'),'-App-ASG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "App ASG"
+      },
+      "copy": {
+        "name": "App-ASG-Copy",
+        "count": 1
+      },
+      "properties": {
+
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "name": "[concat(parameters('Prefix'),'-Database-ASG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Database ASG"
+      },
+      "copy": {
+        "name": "Database-ASG-Copy",
+        "count": 1
+      },
+      "properties": {
+
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('Prefix'), '-Web-NSG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Web NSG"
+      },
+      "copy": {
+        "name": "Web-NSG-Copy",
+        "count": 1
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ALLOW--HTTP-INTERNET--INBOUND",
+            "properties": {
+              "description": "Allow port 80 from Internet Inbound",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "DENY--WebTier-DBTier--OUTBOUND",
+            "properties": {
+              "description": "Deny all traffic from WebTier to DBTer",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "access": "Deny",
+              "priority": 4095,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ALLOW--AzureStorage--OUTBOUND",
+            "properties": {
+              "description": "Azure Storage Outbound",
+              "protocol": "TCP",
+              "destinationAddressPrefix": "[concat('Storage', '.', resourceGroup().location)]",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Outbound",
+              "sourcePortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "destinationPortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ALLOW--WebTier-AppTier--OUTBOUND",
+            "properties": {
+              "description": "Allow WebTier port 443 to AppTier Outbound",
+              "protocol": "TCP",
+              "sourcePortRange": "443",
+              "destinationPortRange": "443",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-App-ASG')]"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "Web-ASG-Copy",
+        "App-ASG-Copy",
+        "Database-ASG-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('Prefix'), '-App-NSG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "App NSG"
+      },
+      "copy": {
+        "name": "App-NSG-Copy",
+        "count": 1
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ALLOW--AzureStorage--OUTBOUND",
+            "properties": {
+              "description": "Azure Storage Outbound",
+              "protocol": "TCP",
+              "destinationAddressPrefix": "[concat('Storage', '.', resourceGroup().location)]",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Outbound",
+              "sourcePortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "destinationPortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-App-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ALLOW--AppTier-DBTier--OUTBOUND",
+            "properties": {
+              "description": "Allow AppTier Port 1433 to DBTier Outbound",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1433",
+              "access": "Allow",
+              "priority": 1010,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-App-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ALLOW--WebTier-AppTier--INBOUND",
+            "properties": {
+              "description": "Allow WebTier Port 443 to AppTier Inbound",
+              "protocol": "TCP",
+              "sourcePortRange": "443",
+              "destinationPortRange": "443",
+              "access": "Allow",
+              "priority": 900,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-App-ASG')]"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "Web-ASG-Copy",
+        "App-ASG-Copy",
+        "Database-ASG-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('Prefix'), '-Database-NSG')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Database NSG"
+      },
+      "copy": {
+        "name": "Database-NSG-Copy",
+        "count": 1
+      },
+      "properties": {
+        "securityRules": [
+          {
+            "name": "ALLOW--AzureStorage--OUTBOUND",
+            "properties": {
+              "description": "Azure Storage Outbound",
+              "protocol": "TCP",
+              "destinationAddressPrefix": "[concat('Storage', '.', resourceGroup().location)]",
+              "access": "Allow",
+              "priority": 1000,
+              "direction": "Outbound",
+              "sourcePortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "destinationPortRanges": [
+                "8443",
+                "3260",
+                "443"
+              ],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "DENY--WebTier-DBTier--INBOUND",
+            "properties": {
+              "description": "Deny all traffic from Web to DB tier",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "access": "Deny",
+              "priority": 4095,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Web-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ]
+            }
+          },
+          {
+            "name": "ALLOW--AppTier-DBTier--INBOUND",
+            "properties": {
+              "description": "Allow AppTier port 1433 to DBTier",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1433",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "sourceApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-App-ASG')]"
+                }
+              ],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "Web-ASG-Copy",
+        "App-ASG-Copy",
+        "Database-ASG-Copy"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('vNET_Info')[copyIndex()].vNET_Name]",
+      "apiVersion": "2017-08-01",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "vNET_Copy",
+        "count": "[length(variables('vNET_Info'))]"
+      },
+      "tags": {
+        "displayName": "Virtual Network"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vNET_Info')[copyIndex()].vNET_AddressSpace]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_WEB_Name]",
+            "properties": {
+              "addressPrefix": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_WEB_CIDR]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vNET_Info')[copyIndex()].vNET_Subnet_WEB_NSG)]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Storage"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_APP_Name]",
+            "properties": {
+              "addressPrefix": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_APP_CIDR]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vNET_Info')[copyIndex()].vNET_Subnet_App_NSG)]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Storage"
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_DB_Name]",
+            "properties": {
+              "addressPrefix": "[variables('vNET_Info')[copyIndex()].vNET_Subnet_DB_CIDR]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('vNET_Info')[copyIndex()].vNET_Subnet_DB_NSG)]"
+              },
+              "serviceEndpoints": [
+                {
+                  "service": "Microsoft.Storage"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "Web-NSG-Copy",
+        "App-NSG-Copy",
+        "Database-NSG-Copy"
+      ]
+    }
+  ],
+  "outputs": {
+    "vNETRef_Web": {
+      "type": "string",
+      "value": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', concat(parameters('Prefix'), '-WebDemo-vNET'), 'Web')]"
+    },
+    "vNETRef_App": {
+      "type": "string",
+      "value": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', concat(parameters('Prefix'), '-WebDemo-vNET'), 'App')]"
+    },
+    "vNETRef_Database": {
+      "type": "string",
+      "value": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', concat(parameters('Prefix'), '-WebDemo-vNET'), 'Database')]"
+    }
+  }
+}

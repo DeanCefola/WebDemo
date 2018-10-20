@@ -1,0 +1,177 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "adminUsername": {
+      "type": "string"
+    },
+    "AvailabilitySet": {
+      "type": "string"
+    },
+    "Prefix": {
+      "type": "string"
+    },
+    "Instance": {
+      "type": "int"
+    },
+    "Subnet": {
+      "type": "string"
+    },
+    "TEMPLATES": {
+      "type": "object"
+    },
+    "VM_IMAGES": {
+      "type": "object"
+    },
+    "VM_SIZES": {
+      "type": "string"
+    }
+  },
+  "variables": {
+
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-05-10",
+      "name": "AvailabilitySet-DB",
+      "type": "Microsoft.Resources/deployments",
+      "copy": {
+        "name": "AVSet-Copy",
+        "count": 1
+      },
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.Compute/availabilitySets",
+              "name": "[parameters('AvailabilitySet')]",
+              "apiVersion": "2016-04-30-preview",
+              "location": "[resourceGroup().location]",
+              "tags": {
+                "displayName": "Availability Set"
+              },
+              "sku": {
+                "name": "Aligned"
+              },
+              "properties": {
+                "platformUpdateDomainCount": 5,
+                "platformFaultDomainCount": 2
+              },
+              "dependsOn": [
+
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex(),'-nic')]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "DB Nics"
+      },
+      "copy": {
+        "name": "DBNIC-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "subnet": {
+                "id": "[parameters('Subnet')]"
+              },
+              "applicationSecurityGroups": [
+                {
+                  "id": "[concat(subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/applicationSecurityGroups/',parameters('Prefix'),'-Database-ASG')]"
+                }
+              ],
+              "privateIPAllocationMethod": "Dynamic"
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex())]",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "DB Servers"
+      },
+      "copy": {
+        "name": "DBVM-Copy",
+        "count": "[parameters('Instance')]"
+      },
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', concat(parameters('Prefix'),'-AVSetDB'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https://', 'azureacademydiag597', '.blob.core.windows.net/')]"
+          }
+        },
+        "hardwareProfile": {
+          "vmSize": "[parameters('VM_SIZES')]"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('Prefix'),'-DBVM',copyIndex())]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVmAgent": "true"
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[parameters('VM_IMAGES').publisher]",
+            "offer": "[parameters('VM_Images').offer]",
+            "sku": "[parameters('VM_Images').sku]",
+            "version": "[parameters('VM_Images').version]"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('Prefix'),'-DBVM',copyIndex(),'-OSDisk')]",
+            "createOption": "fromImage",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "dataDisks": [
+
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(parameters('Prefix'),'-DBVM',copyIndex(),'-nic'))]"
+            }
+          ]
+        },
+        "licenseType": "[if(equals(parameters('VM_IMAGES'),'Windows'), 'Windows_Server',json('null'))]"
+      },
+      "dependsOn": [
+        "DBNIC-Copy",
+        "AVSet-Copy"
+      ]
+    }
+  ],
+  "outputs": {
+
+  }
+}

@@ -1,0 +1,299 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "Auto-generated container in staging storage account to receive post-build staging folder upload"
+      }
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      }
+    },
+    "Prefix": {
+      "type": "string",
+      "defaultValue": "z99"
+    },
+    "AdminPassword": {
+      "type": "securestring"
+    },
+    "AdminUserName": {
+      "type": "string"
+    },
+    "Instance": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 4,
+      "defaultValue": 1
+    },
+    "IPAddress_Space": {
+      "type": "string",
+      "defaultValue": "10.0",
+      "metadata": {
+        "description": "Enter the CIRD for this deployment (10.0.x.x leave last 2 octets blank)"
+      },
+      "minLength": 4,
+      "maxLength": 12
+    },
+    "OperatingSystem": {
+      "type": "string",
+      "defaultValue": "Windows",
+      "allowedValues": [
+        "Windows",
+        "Linux"
+      ]
+    },
+    "VMSize": {
+      "type": "string",
+      "defaultValue": "Small",
+      "allowedValues": [
+        "Small",
+        "Medium",
+        "Large"
+      ]
+    },
+    "Deploy_WebServers": {
+      "type": "bool",
+      "allowedValues": [
+        true,
+        false
+      ],
+      "defaultValue": true
+    },
+    "Deploy_AppServers": {
+      "type": "bool",
+      "allowedValues": [
+        true,
+        false
+      ],
+      "defaultValue": true
+    },
+    "Deploy_DatabaseServers": {
+      "type": "bool",
+      "allowedValues": [
+        true,
+        false
+      ],
+      "defaultValue": true
+    }
+  },
+  "variables": {
+    "TEMPLATES": {
+      "WebServer": {
+        "Link": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/webserver.json', parameters('_artifactsLocationSasToken'))]"
+      },
+      "AppServer": {
+        "Link": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/appserver.json', parameters('_artifactsLocationSasToken'))]"
+      },
+      "Database": {
+        "Link": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/database.json', parameters('_artifactsLocationSasToken'))]"
+      },
+      "VirtualNetwork": {
+        "Link": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/VirtualNetwork.json', parameters('_artifactsLocationSasToken'))]"
+      }
+    },
+    "VM_Images": {
+      "Windows": {
+        "OperatingSystem": "Windows",
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      },
+      "Linux": {
+        "OperatingSystem": "Linux",
+        "publisher": "SUSE",
+        "offer": "SLES",
+        "sku": "12-SP3",
+        "version": "latest"
+      }
+    },
+    "VM_SIZES": {
+      "Small": {
+        "DBsize": "Standard_F2s",
+        "WebSize": "Standard_F2s",
+        "AppSize": "Standard_F2s",
+        "JumpSize": "Standard_F2s"
+      },
+      "Medium": {
+        "DBSize": "Standard_DS3_v2",
+        "WebSize": "Standard_F2s",
+        "AppSize": "Standard_F4s",
+        "JumpSize": "Standard_F2s"
+      },
+      "Large": {
+        "DBsize": "Standard_DS14_v2",
+        "WebSize": "Standard_F4s_v2",
+        "AppSize": "Standard_D8s_v3",
+        "JumpSize": "Standard_F2s"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Deploy_VirtualNetwork",
+      "apiVersion":"2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('Templates')['VirtualNetwork'].Link]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "Prefix": {
+            "value": "[parameters('Prefix')]"
+          },
+          "IPAddress_Space": {
+            "value": "[parameters('IPAddress_Space')]"
+          }
+        }
+      },
+      "dependsOn": [
+
+      ]      
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "[concat('Deploy_WebServers',deployment().name)]",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('TEMPLATES')['WebServer'].Link]"
+        },
+        "parameters": {
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('AdminUserName')]"
+          },
+          "AvailabilitySet": {
+            "value": "[concat(parameters('Prefix'),'-AVSetWeb')]"
+          },    
+          "Prefix": {
+            "value": "[parameters('Prefix')]"
+          },
+          "Instance": {
+            "value": "[parameters('Instance')]"
+          },
+          "Subnet": {
+            "value": "[reference('Deploy_VirtualNetwork').outputs.vNETRef_Web.value]"
+          },
+          "TEMPLATES": {
+            "value": "[variables('TEMPLATES')]"
+          },
+          "VM_IMAGES": {
+            "value": "[variables('VM_IMAGES')[parameters('OperatingSystem')]]"          
+          },
+          "VM_SIZES": {
+            "value": "[variables('VM_SIZES')[parameters('VMSize')].WebSize]"         
+          }
+        }
+      },
+      "dependsOn": [
+
+      ],
+      "condition": "[parameters('Deploy_WebServers')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Deploy_AppServers",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('TEMPLATES')['AppServer'].Link]"
+        },
+        "parameters": {
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('AdminUserName')]"
+          },
+          "AvailabilitySet": {
+            "value": "[concat(parameters('Prefix'),'-AVSetApp')]"
+          },
+          "Prefix": {
+            "value": "[parameters('Prefix')]"
+          },
+          "Instance": {
+            "value": "[parameters('Instance')]"
+          },
+          "Subnet": {
+            "value": "[reference('Deploy_VirtualNetwork').outputs.vNETRef_App.value]"
+          },
+          "TEMPLATES": {
+            "value": "[variables('TEMPLATES')]"
+          },
+          "VM_IMAGES": {
+            "value": "[variables('VM_IMAGES')[parameters('OperatingSystem')]]"
+          },
+          "VM_SIZES": {
+            "value": "[variables('VM_SIZES')[parameters('VMSize')].AppSize]"
+          }
+        }
+      },
+      "dependsOn": [
+
+      ],
+      "condition": "[parameters('Deploy_AppServers')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Deploy_DatabaseServers",
+      "apiVersion": "2017-05-10",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('TEMPLATES')['Database'].Link]"
+        },
+        "parameters": {
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('AdminUserName')]"
+          },
+          "AvailabilitySet": {
+            "value": "[concat(parameters('Prefix'),'-AVSetDB')]"
+          },
+          "Prefix": {
+            "value": "[parameters('Prefix')]"
+          },
+          "Instance": {
+            "value": "[parameters('Instance')]"
+          },
+          "Subnet": {
+            "value": "[reference('Deploy_VirtualNetwork').outputs.vNETRef_Database.value]"
+          },
+          "TEMPLATES": {
+            "value": "[variables('TEMPLATES')]"
+          },
+          "VM_IMAGES": {
+            "value": "[variables('VM_IMAGES')[parameters('OperatingSystem')]]"
+          },
+          "VM_SIZES": {
+            "value": "[variables('VM_SIZES')[parameters('VMSize')].DBSize]"
+          }
+        }
+      },
+      "dependsOn": [
+
+      ],
+      "condition": "[parameters('Deploy_DatabaseServers')]"
+    }
+  ],
+  "outputs": {
+    "PublicIPFQDN": {
+      "type": "string",
+      "value": "[reference('Deploy_WebServers').outputs.PublicIPFQDN.value]"
+    }
+  }
+}
