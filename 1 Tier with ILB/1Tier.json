@@ -51,9 +51,9 @@
       "type": "securestring"
     }
   },
-  "variables": {    
+  "variables": {
     "virtualMachineName": "[concat(parameters('TierName'),'VM')]",
-    "vnetId": "[resourceId('AA-WebDemo','Microsoft.Network/virtualNetworks', 'AA-WebDemo-vNET')]",
+    "vnetId": "[resourceId(resourcegroup().name,'Microsoft.Network/virtualNetworks', 'AA-WebDemo-vNET')]",
     "subnetRef": "[concat(variables('vnetId'), '/subnets/', 'default')]",
     "UriFileNamePieces": "[split(parameters('fileUris'), '/')]",
     "firstFileNameString": "[variables('UriFileNamePieces')[sub(length(variables('UriFileNamePieces')), 1)]]",
@@ -330,7 +330,7 @@
           }
         ],
         "networkSecurityGroup": {
-          "id": "[resourceId('AA-WebDemo', 'Microsoft.Network/networkSecurityGroups', concat(variables('virtualMachineName'),'-NSG'))]"
+          "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', concat(variables('virtualMachineName'),'-NSG'))]"
         }
       },
       "dependsOn": [
@@ -425,8 +425,7 @@
           ]
         }
       ]
-    }
-   
+    }   
   ],
   "outputs": {
     "adminUsername": {

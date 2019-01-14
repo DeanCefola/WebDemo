@@ -9,7 +9,12 @@
       "value": "lntad"
     },
     "adminPassword": {
-      "value": "GEN-PASSWORD"
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
     }
    
    

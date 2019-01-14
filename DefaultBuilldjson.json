@@ -1,0 +1,177 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "storageweb1Type": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_ZRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Premium_LRS"
+      ]
+    },
+    "Web-VM-1Name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Web-VM-1AdminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Web-VM-1AdminPassword": {
+      "type": "securestring"
+    },
+    "Web-VM-1WindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ]
+    }
+        
+  },
+  "variables": {
+    "storageweb1Name": "[concat('storageweb1', uniqueString(resourceGroup().id))]",
+    "vnet01Prefix": "10.0.0.0/16",
+    "vnet01Subnet1Name": "Subnet-1",
+    "vnet01Subnet1Prefix": "10.0.0.0/24",
+    "vnet01Subnet2Name": "Subnet-2",
+    "vnet01Subnet2Prefix": "10.0.1.0/24",
+    "Web-VM-1ImagePublisher": "MicrosoftWindowsServer",
+    "Web-VM-1ImageOffer": "WindowsServer",
+    "Web-VM-1OSDiskName": "Web-VM-1OSDisk",
+    "Web-VM-1VmSize": "Standard_D2_v2",
+    "Web-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
+    "Web-VM-1SubnetRef": "[concat(variables('Web-VM-1VnetID'), '/subnets/', variables('vnet01Subnet1Name'))]",
+    "Web-VM-1StorageAccountContainerName": "vhds",
+    "Web-VM-1NicName": "[concat(parameters('Web-VM-1Name'), 'NetworkInterface')]"
+    
+  },
+  "resources": [
+    {
+      "name": "[variables('storageweb1Name')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-01-01",
+      "sku": {
+        "name": "[parameters('storageweb1Type')]"
+      },
+      "dependsOn": [ ],
+      "tags": {
+        "displayName": "storageweb1"
+      },
+      "kind": "Storage"
+    },
+    {
+      "name": "vnet01",
+      "type": "Microsoft.Network/virtualNetworks",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [ ],
+      "tags": {
+        "displayName": "vnet01"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('vnet01Prefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('vnet01Subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('vnet01Subnet1Prefix')]"
+            }
+          },
+          {
+            "name": "[variables('vnet01Subnet2Name')]",
+            "properties": {
+              "addressPrefix": "[variables('vnet01Subnet2Prefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[variables('Web-VM-1NicName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]"
+      ],
+      "tags": {
+        "displayName": "Web-VM-1Nic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('Web-VM-1SubnetRef')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "[parameters('Web-VM-1Name')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2015-06-15",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageweb1Name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('Web-VM-1NicName'))]"
+      ],
+      "tags": {
+        "displayName": "Web-VM-1"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('Web-VM-1VmSize')]"
+        },
+        "osProfile": {
+          "computerName": "[parameters('Web-VM-1Name')]",
+          "adminUsername": "[parameters('Web-VM-1AdminUsername')]",
+          "adminPassword": "[parameters('Web-VM-1AdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('Web-VM-1ImagePublisher')]",
+            "offer": "[variables('Web-VM-1ImageOffer')]",
+            "sku": "[parameters('Web-VM-1WindowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "Web-VM-1OSDisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageweb1Name')), '2016-01-01').primaryEndpoints.blob, variables('Web-VM-1StorageAccountContainerName'), '/', variables('Web-VM-1OSDiskName'), '.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('Web-VM-1NicName'))]"
+            }
+          ]
+        }
+      }
+    }
+    
+  ],
+  "outputs": {
+  }
+}
