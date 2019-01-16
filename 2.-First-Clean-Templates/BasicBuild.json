@@ -2,6 +2,26 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "AdminPassword": {
+      "type": "securestring"
+    },
+    "AdminUserName": {
+      "type": "string"
+    },
+    "Instance": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 4,
+      "defaultValue": 1
+    },
+    "OperatingSystem": {
+      "type": "string",
+      "defaultValue": "Windows",
+      "allowedValues": [
+        "Windows",
+        "Linux"
+      ]
+    },
     "TierName": {
       "type": "string",
       "allowedValues": [
@@ -11,12 +31,6 @@
       ],
       "defaultValue": "Web"
     },
-    "Instance": {
-      "type": "int",
-      "minValue": 1,
-      "maxValue": 4,
-      "defaultValue": 1
-    },
     "VMSize": {
       "type": "string",
       "defaultValue": "Standard_F2s_v2",
@@ -25,27 +39,11 @@
         "Standard_B1ms",
         "Standard_D2"
       ]
-    },
-    "AdminUserName": {
-      "type": "string"
-    },
-    "AdminPassword": {
-      "type": "securestring"
-    },
-    "OperatingSystem": {
-      "type": "string",
-      "defaultValue": "Windows",
-      "allowedValues": [
-        "Windows",
-        "Linux"
-      ]
     }
-
   },
   "variables": {
-    "virtualMachineName": "[concat(parameters('TierName'),'VM')]",
-    "vnetId": "[resourceId('AA-WebDemo','Microsoft.Network/virtualNetworks', 'AA-WebDemo-vNET')]",
     "subnetRef": "[concat(variables('vnetId'), '/subnets/', 'default')]",
+    "virtualMachineName": "[concat(parameters('TierName'),'VM')]",
     "VM_Images": {
       "Windows": {
         "publisher": "MicrosoftWindowsServer",
@@ -54,12 +52,13 @@
         "version": "latest"
       },
       "Linux": {
-        "publisher": "SUSE",
-        "offer": "SLES",
-        "sku": "12-SP3",
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "16.04.0-LTS",
         "version": "latest"
       }
-    }
+    },
+    "vnetId": "[resourceId('AA-WebDemo','Microsoft.Network/virtualNetworks', 'AA-WebDemo-vNET')]"
   },
   "resources": [
     {
@@ -215,9 +214,6 @@
     }
   ],
   "outputs": {
-    "AdminName": {
-      "type": "string",
-      "value": "[parameters('AdminUserName')]"
-    }
+    
   }
 }

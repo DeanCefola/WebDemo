@@ -1,0 +1,51 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Web-VM-1Name": {
+      "value": "Web-VM-1"
+    },
+    "Web-VM-1AdminUserName": {
+      "value": "lntad"
+    },
+    "App-VM-1Name": {
+      "value": "App-VM-1"
+    },
+    "App-VM-1AdminUserName": {
+      "value": "lntad"
+    },
+    "DB-VM-1Name": {
+      "value": "DB-VM-1"
+    },
+    "DB-VM-1AdminUserName": {
+      "value": "lntad"
+    },
+    "Web-VM-1AdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
+    },
+    "App-VM-1AdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
+    },
+    "DB-VM-1AdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
+    },
+    "Web-VM-1-PIPDnsName": {
+      "value": "webvm1"
+    }
+  }
+}

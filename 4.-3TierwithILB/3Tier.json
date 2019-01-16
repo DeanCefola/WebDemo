@@ -66,9 +66,9 @@
         "version": "latest"
       },
       "Linux": {
-        "publisher": "SUSE",
-        "offer": "SLES",
-        "sku": "12-SP3",
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "16.04.0-LTS",
         "version": "latest"
       }
     }
@@ -360,7 +360,7 @@
               "privateIPAllocationMethod": "Dynamic"
             }
           }
-        ]        
+        ]
       },
       "dependsOn": [
         "vNET-Copy",
@@ -645,9 +645,9 @@
     }
   ],
   "outputs": {
-    "AdminName": {
+    "PublicIPFQDN": {
       "type": "string",
-      "value": "[parameters('AdminUserName')]"
+      "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', concat(parameters('Prefix'),'-Web-PIP'), '2018-02-01').dnsSettings.fqdn)]"
     }
   }
 }

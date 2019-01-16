@@ -2,48 +2,28 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "storageweb1Type": {
+    "_artifactsLocation": {
       "type": "string",
-      "defaultValue": "Standard_LRS",
-      "allowedValues": [
-        "Standard_LRS",
-        "Standard_ZRS",
-        "Standard_GRS",
-        "Standard_RAGRS",
-        "Premium_LRS"
-      ]
+      "metadata": {
+        "description": "Auto-generated container in staging storage account to receive post-build staging folder upload"
+      }
     },
-    "Web-VM-1Name": {
-      "type": "string",
-      "minLength": 1
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      }
     },
-    "Web-VM-1AdminUserName": {
-      "type": "string",
-      "minLength": 1
-    },
-    "Web-VM-1AdminPassword": {
+    "App-VM-1AdminPassword": {
       "type": "securestring"
-    },
-    "Web-VM-1WindowsOSVersion": {
-      "type": "string",
-      "defaultValue": "2012-R2-Datacenter",
-      "allowedValues": [
-        "2008-R2-SP1",
-        "2012-Datacenter",
-        "2012-R2-Datacenter",
-        "Windows-Server-Technical-Preview"
-      ]
-    },
-    "App-VM-1Name": {
-      "type": "string",
-      "minLength": 1
     },
     "App-VM-1AdminUserName": {
       "type": "string",
       "minLength": 1
     },
-    "App-VM-1AdminPassword": {
-      "type": "securestring"
+    "App-VM-1Name": {
+      "type": "string",
+      "minLength": 1
     },
     "App-VM-1WindowsOSVersion": {
       "type": "string",
@@ -55,16 +35,16 @@
         "Windows-Server-Technical-Preview"
       ]
     },
-    "DB-VM-1Name": {
-      "type": "string",
-      "minLength": 1
+    "DB-VM-1AdminPassword": {
+      "type": "securestring"
     },
     "DB-VM-1AdminUserName": {
       "type": "string",
       "minLength": 1
     },
-    "DB-VM-1AdminPassword": {
-      "type": "securestring"
+    "DB-VM-1Name": {
+      "type": "string",
+      "minLength": 1
     },
     "DB-VM-1WindowsOSVersion": {
       "type": "string",
@@ -75,41 +55,78 @@
         "2012-R2-Datacenter",
         "Windows-Server-Technical-Preview"
       ]
+    },
+    "storageweb1Type": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_ZRS",
+        "Standard_GRS",
+        "Standard_RAGRS",
+        "Premium_LRS"
+      ]
+    },
+    "Web-VM-1AdminPassword": {
+      "type": "securestring"
+    },
+    "Web-VM-1AdminUserName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Web-VM-1Name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Web-VM-1-PIPDnsName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Web-VM-1WindowsOSVersion": {
+      "type": "string",
+      "defaultValue": "2012-R2-Datacenter",
+      "allowedValues": [
+        "2008-R2-SP1",
+        "2012-Datacenter",
+        "2012-R2-Datacenter",
+        "Windows-Server-Technical-Preview"
+      ]
     }
-        
   },
   "variables": {
+    "App-VM-1ImageOffer": "WindowsServer",
+    "App-VM-1ImagePublisher": "MicrosoftWindowsServer",
+    "App-VM-1NicName": "[concat(parameters('App-VM-1Name'), 'NetworkInterface')]",
+    "App-VM-1OSDiskName": "App-VM-1OSDisk",
+    "App-VM-1StorageAccountContainerName": "vhds",
+    "App-VM-1SubnetRef": "[concat(variables('App-VM-1VnetID'), '/subnets/', variables('vnet01Subnet2Name'))]",
+    "App-VM-1VmSize": "Standard_D2_v2",
+    "App-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
+    "BuildWebServerScriptFileName": "BuildWebServer.ps1",
+    "BuildWebServerScriptFolder": "1.-What-VS-can-do/CustomScripts",
+    "DB-VM-1ImageOffer": "WindowsServer",
+    "DB-VM-1ImagePublisher": "MicrosoftWindowsServer",
+    "DB-VM-1NicName": "[concat(parameters('DB-VM-1Name'), 'NetworkInterface')]",
+    "DB-VM-1OSDiskName": "DB-VM-1OSDisk",
+    "DB-VM-1StorageAccountContainerName": "vhds",
+    "DB-VM-1SubnetRef": "[concat(variables('DB-VM-1VnetID'), '/subnets/', variables('vnet01Subnet2Name'))]",
+    "DB-VM-1VmSize": "Standard_D2_v2",
+    "DB-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
     "storageweb1Name": "[concat('storageweb1', uniqueString(resourceGroup().id))]",
     "vnet01Prefix": "10.0.0.0/16",
     "vnet01Subnet1Name": "Subnet-1",
     "vnet01Subnet1Prefix": "10.0.0.0/24",
     "vnet01Subnet2Name": "Subnet-2",
     "vnet01Subnet2Prefix": "10.0.1.0/24",
-    "Web-VM-1ImagePublisher": "MicrosoftWindowsServer",
     "Web-VM-1ImageOffer": "WindowsServer",
-    "Web-VM-1OSDiskName": "Web-VM-1OSDisk",
-    "Web-VM-1VmSize": "Standard_D2_v2",
-    "Web-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
-    "Web-VM-1SubnetRef": "[concat(variables('Web-VM-1VnetID'), '/subnets/', variables('vnet01Subnet1Name'))]",
-    "Web-VM-1StorageAccountContainerName": "vhds",
+    "Web-VM-1ImagePublisher": "MicrosoftWindowsServer",
     "Web-VM-1NicName": "[concat(parameters('Web-VM-1Name'), 'NetworkInterface')]",
-    "App-VM-1ImagePublisher": "MicrosoftWindowsServer",
-    "App-VM-1ImageOffer": "WindowsServer",
-    "App-VM-1OSDiskName": "App-VM-1OSDisk",
-    "App-VM-1VmSize": "Standard_D2_v2",
-    "App-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
-    "App-VM-1SubnetRef": "[concat(variables('App-VM-1VnetID'), '/subnets/', variables('vnet01Subnet2Name'))]",
-    "App-VM-1StorageAccountContainerName": "vhds",
-    "App-VM-1NicName": "[concat(parameters('App-VM-1Name'), 'NetworkInterface')]",
-    "DB-VM-1ImagePublisher": "MicrosoftWindowsServer",
-    "DB-VM-1ImageOffer": "WindowsServer",
-    "DB-VM-1OSDiskName": "DB-VM-1OSDisk",
-    "DB-VM-1VmSize": "Standard_D2_v2",
-    "DB-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
-    "DB-VM-1SubnetRef": "[concat(variables('DB-VM-1VnetID'), '/subnets/', variables('vnet01Subnet2Name'))]",
-    "DB-VM-1StorageAccountContainerName": "vhds",
-    "DB-VM-1NicName": "[concat(parameters('DB-VM-1Name'), 'NetworkInterface')]"
-    
+    "Web-VM-1OSDiskName": "Web-VM-1OSDisk",
+    "Web-VM-1-PIPName": "Web-VM-1-PIP",
+    "Web-VM-1StorageAccountContainerName": "vhds",
+    "Web-VM-1SubnetRef": "[concat(variables('Web-VM-1VnetID'), '/subnets/', variables('vnet01Subnet1Name'))]",
+    "Web-VM-1VmSize": "Standard_D2_v2",
+    "Web-VM-1VnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]"
   },
   "resources": [
     {
@@ -120,7 +137,7 @@
       "sku": {
         "name": "[parameters('storageweb1Type')]"
       },
-      "dependsOn": [ ],
+      "dependsOn": [],
       "tags": {
         "displayName": "storageweb1"
       },
@@ -131,7 +148,7 @@
       "type": "Microsoft.Network/virtualNetworks",
       "location": "[resourceGroup().location]",
       "apiVersion": "2016-03-30",
-      "dependsOn": [ ],
+      "dependsOn": [],
       "tags": {
         "displayName": "vnet01"
       },
@@ -158,12 +175,29 @@
       }
     },
     {
+      "name": "[variables('Web-VM-1-PIPName')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2016-03-30",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "Web-VM-1-PIP"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[parameters('Web-VM-1-PIPDnsName')]"
+        }
+      }
+    },
+    {
       "name": "[variables('Web-VM-1NicName')]",
       "type": "Microsoft.Network/networkInterfaces",
       "location": "[resourceGroup().location]",
       "apiVersion": "2016-03-30",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]"
+        "[resourceId('Microsoft.Network/virtualNetworks', 'vnet01')]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('Web-VM-1-PIPName'))]"
       ],
       "tags": {
         "displayName": "Web-VM-1Nic"
@@ -176,6 +210,9 @@
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
                 "id": "[variables('Web-VM-1SubnetRef')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('Web-VM-1-PIPName'))]"
               }
             }
           }
@@ -226,7 +263,33 @@
             }
           ]
         }
-      }
+      },
+      "resources": [
+        {
+          "name": "BuildWebServer",
+          "type": "extensions",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2016-03-30",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('Web-VM-1Name'))]"
+          ],
+          "tags": {
+            "displayName": "BuildWebServer"
+          },
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.4",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('_artifactsLocation'), '/', variables('BuildWebServerScriptFolder'), '/', variables('BuildWebServerScriptFileName'), parameters('_artifactsLocationSasToken'))]"
+              ],
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('BuildWebServerScriptFolder'), '/', variables('BuildWebServerScriptFileName'))]"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "[variables('App-VM-1NicName')]",
@@ -370,8 +433,7 @@
         }
       }
     }
-    
   ],
   "outputs": {
   }
-}
+} 

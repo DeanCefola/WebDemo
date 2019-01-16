@@ -105,10 +105,9 @@
         "version": "latest"
       },
       "Linux": {
-        "OperatingSystem": "Linux",
-        "publisher": "SUSE",
-        "offer": "SLES",
-        "sku": "12-SP3",
+        "publisher": "Canonical",
+        "offer": "UbuntuServer",
+        "sku": "16.04.0-LTS",
         "version": "latest"
       }
     },
@@ -159,7 +158,7 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "[concat('Deploy_WebServers',deployment().name)]",
+      "name": "Deploy_WebServers",
       "apiVersion": "2017-05-10",
       "properties": {
         "mode": "Incremental",
@@ -175,7 +174,7 @@
           },
           "AvailabilitySet": {
             "value": "[concat(parameters('Prefix'),'-AVSetWeb')]"
-          },    
+          },
           "Prefix": {
             "value": "[parameters('Prefix')]"
           },
@@ -189,10 +188,10 @@
             "value": "[variables('TEMPLATES')]"
           },
           "VM_IMAGES": {
-            "value": "[variables('VM_IMAGES')[parameters('OperatingSystem')]]"          
+            "value": "[variables('VM_IMAGES')[parameters('OperatingSystem')]]"
           },
           "VM_SIZES": {
-            "value": "[variables('VM_SIZES')[parameters('VMSize')].WebSize]"         
+            "value": "[variables('VM_SIZES')[parameters('VMSize')].WebSize]"
           }
         }
       },
