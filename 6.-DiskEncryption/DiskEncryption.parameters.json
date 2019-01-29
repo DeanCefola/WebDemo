@@ -1,0 +1,40 @@
+﻿{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "AdminUserName": {
+      "value": "lntad"
+    },
+    "AdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
+    },
+    "Instance": {
+      "value": 1
+    },
+    "OperatingSystem": {
+      "value": "Windows"
+    },
+    "aadClientID": {
+      "value": "d134e193-b1de-44d2-8aa6-9b5a631b9087"
+    },
+    "keyVaultName": {
+      "value": "AA-KeyVault01"
+    },
+    "keyVaultResourceGroup": {
+      "value": "AzureAcademy"
+    },
+    "aadClientSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "AzureDiskEncryption"
+      }
+    }
+  }
+}
