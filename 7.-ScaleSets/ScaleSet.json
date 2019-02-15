@@ -336,67 +336,226 @@
     },
     {
       "type": "Microsoft.Insights/autoscaleSettings",
-      "apiVersion": "[variables('autoscaleApiVersion')]",
       "name": "[concat('cpuautoscale', variables('namingInfix'))]",
+      "apiVersion": "[variables('autoscaleApiVersion')]",
       "location": "[parameters('location')]",
-      "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachineScaleSets/', parameters('vmssName'))]"
-      ],
       "properties": {
         "name": "[concat('cpuautoscale', variables('namingInfix'))]",
         "targetResourceUri": "[variables('vmssId')]",
         "enabled": true,
         "profiles": [
           {
-            "name": "Profile1",
+            "name": "Afternoon Rush",
             "capacity": {
-              "minimum": "[parameters('autoscaleMin')]",
-              "maximum": "[parameters('autoscaleMax')]",
-              "default": "[parameters('autoscaleDefault')]"
+              "minimum": "5",
+              "maximum": "5",
+              "default": "5"
+            },
+            "rules": [],
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "Eastern Standard Time",
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday"
+                ],
+                "hours": [
+                  13
+                ],
+                "minutes": [
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "name": "Evening Rush",
+            "capacity": {
+              "minimum": "10",
+              "maximum": "10",
+              "default": "10"
+            },
+            "rules": [],
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "Eastern Standard Time",
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday"
+                ],
+                "hours": [
+                  17
+                ],
+                "minutes": [
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "name": "{\"name\":\"CPU %\",\"for\":\"Afternoon Rush\"}",
+            "capacity": {
+              "minimum": "1",
+              "maximum": "12",
+              "default": "5"
             },
             "rules": [
               {
-                "metricTrigger": {
-                  "metricName": "Percentage CPU",
-                  "metricNamespace": "",
-                  "metricResourceUri": "[variables('vmssId')]",
-                  "timeGrain": "PT1M",
-                  "statistic": "Average",
-                  "timeWindow": "PT5M",
-                  "timeAggregation": "Average",
-                  "operator": "GreaterThan",
-                  "threshold": "[parameters('scaleOutCPUPercentageThreshold')]"
-                },
                 "scaleAction": {
                   "direction": "Increase",
                   "type": "ChangeCount",
-                  "value": "[parameters('scaleOutInterval')]",
+                  "value": "1",
                   "cooldown": "PT1M"
-                }
-              },
-              {
+                },
                 "metricTrigger": {
                   "metricName": "Percentage CPU",
                   "metricNamespace": "",
                   "metricResourceUri": "[variables('vmssId')]",
-                  "timeGrain": "PT1M",
+                  "operator": "GreaterThan",
                   "statistic": "Average",
-                  "timeWindow": "PT5M",
+                  "threshold": 75,
                   "timeAggregation": "Average",
-                  "operator": "LessThan",
-                  "threshold": "[parameters('scaleInCPUPercentageThreshold')]"
-                },
+                  "timeGrain": "PT1M",
+                  "timeWindow": "PT5M"
+                }
+              },
+              {
                 "scaleAction": {
                   "direction": "Decrease",
                   "type": "ChangeCount",
-                  "value": "[parameters('scaleInInterval')]",
+                  "value": "1",
                   "cooldown": "PT1M"
+                },
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "",
+                  "metricResourceUri": "[variables('vmssId')]",
+                  "operator": "LessThan",
+                  "statistic": "Average",
+                  "threshold": 25,
+                  "timeAggregation": "Average",
+                  "timeGrain": "PT1M",
+                  "timeWindow": "PT5M"
                 }
               }
-            ]
+            ],
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "Eastern Standard Time",
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday"
+                ],
+                "hours": [
+                  16
+                ],
+                "minutes": [
+                  59
+                ]
+              }
+            }
+          },
+          {
+            "name": "{\"name\":\"CPU %\",\"for\":\"Evening Rush\"}",
+            "capacity": {
+              "minimum": "1",
+              "maximum": "12",
+              "default": "5"
+            },
+            "rules": [
+              {
+                "scaleAction": {
+                  "direction": "Increase",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT1M"
+                },
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "",
+                  "metricResourceUri": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/zz-scaleset/providers/Microsoft.Compute/virtualMachineScaleSets/VMScaleSet",
+                  "operator": "GreaterThan",
+                  "statistic": "Average",
+                  "threshold": 75,
+                  "timeAggregation": "Average",
+                  "timeGrain": "PT1M",
+                  "timeWindow": "PT5M"
+                }
+              },
+              {
+                "scaleAction": {
+                  "direction": "Decrease",
+                  "type": "ChangeCount",
+                  "value": "1",
+                  "cooldown": "PT1M"
+                },
+                "metricTrigger": {
+                  "metricName": "Percentage CPU",
+                  "metricNamespace": "",
+                  "metricResourceUri": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/zz-scaleset/providers/Microsoft.Compute/virtualMachineScaleSets/VMScaleSet",
+                  "operator": "LessThan",
+                  "statistic": "Average",
+                  "threshold": 25,
+                  "timeAggregation": "Average",
+                  "timeGrain": "PT1M",
+                  "timeWindow": "PT5M"
+                }
+              }
+            ],
+            "recurrence": {
+              "frequency": "Week",
+              "schedule": {
+                "timeZone": "Eastern Standard Time",
+                "days": [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday"
+                ],
+                "hours": [
+                  22
+                ],
+                "minutes": [
+                  0
+                ]
+              }
+            }
           }
         ]
-      }
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachineScaleSets/', parameters('vmssName'))]"
+      ]
+
+
+
     }
-  ]
+
+
+
+  ],
+  "outputs": {
+
+  }
 }
