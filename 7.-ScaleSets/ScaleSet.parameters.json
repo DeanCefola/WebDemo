@@ -1,0 +1,104 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "eastus2"
+    },
+    "vmssName": {
+      "value": "VMScaleSet"
+    },
+    "vmSku": {
+      "value": "Standard_DS1_v2"
+    },
+    "adminUsername": {
+      "value": "lntad"
+    },
+    "instanceCount": {
+      "value": "12"
+    },
+    "singlePlacementGroup": {
+      "value": "false"
+    },
+    "priority": {
+      "value": "Regular"
+    },
+    "pipName": {
+      "value": "webscaleset-pip"
+    },
+    "pipLabel": {
+      "value": "webscaleset"
+    },
+    "ipAllocationMethod": {
+      "value": "Static"
+    },
+    "skuType": {
+      "value": "Standard"
+    },
+    "subnetId": {
+      "value": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/zz-ScaleSet/providers/Microsoft.Network/virtualNetworks/scaleset-vnet/subnets/webfrontend"
+    },
+    "enableAcceleratedNetworking": {
+      "value": "false"
+    },
+    "publicIpAddressPerInstance": {
+      "value": "false"
+    },
+    "upgradeMode": {
+      "value": "Manual"
+    },
+    "image": {
+      "value": {
+        "sku": "2019-Datacenter",
+        "publisher": "MicrosoftWindowsServer",
+        "version": "latest",
+        "offer": "WindowsServer"
+      }
+    },
+    "autoscaleDefault": {
+      "value": "1"
+    },
+    "autoscaleMax": {
+      "value": "12"
+    },
+    "autoscaleMin": {
+      "value": "1"
+    },
+    "scaleInCPUPercentageThreshold": {
+      "value": "25"
+    },
+    "scaleInInterval": {
+      "value": "1"
+    },
+    "scaleOutCPUPercentageThreshold": {
+      "value": "75"
+    },
+    "scaleOutInterval": {
+      "value": "1"
+    },
+    "adminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/AzureAcademy/providers/Microsoft.KeyVault/vaults/AA-KeyVault01"
+        },
+        "secretName": "DefaultPassword"
+      }
+    },
+    "zones": {
+      "value": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "spreadingAlgorithmPlatformFaultDomainCount": {
+      "value": "5"
+    },
+    "zoneBalance": {
+      "value": "true"
+    },
+    "vnetName": {
+      "value": "scaleset-vnet"
+    }
+  }
+}
