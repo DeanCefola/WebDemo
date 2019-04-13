@@ -1,0 +1,398 @@
+﻿{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Prefix": {
+      "type": "string",
+      "maxLength": 3,
+      "minLength": 3,
+      "metadata": {
+        "description": "Prefix for Customer/Project."
+      },
+      "defaultValue": "WC3"
+    },
+    "DataBaseSize": {
+      "type": "string",
+      "allowedValues": [
+        "Small",
+        "Medium",
+        "Large"
+      ],
+      "defaultValue": "Small"
+    },
+    "Environment": {
+      "type": "string",
+      "allowedValues": [
+        "Dev",
+        "Prod"
+      ]
+    },
+    "adminPassword": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "DataDiskArray": "[variables(concat('DataDiskArray_', parameters('DataBaseSize')))]",
+    "DataDiskArray_Small": [
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data0')]",
+        "diskSizeGB": 256,
+        "caching": "ReadOnly",
+        "lun": 0
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data1')]",
+        "diskSizeGB": 128,
+        "caching": "ReadWrite",
+        "lun": 1
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data2')]",
+        "diskSizeGB": 128,
+        "caching": "ReadWrite",
+        "lun": 2
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data3')]",
+        "diskSizeGB": 64,
+        "caching": "None",
+        "lun": 3
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data4')]",
+        "diskSizeGB": 256,
+        "caching": "ReadOnly",
+        "lun": 4
+      }
+    ],
+    "DataDiskArray_Medium": [
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data0')]",
+        "diskSizeGB": 256,
+        "caching": "ReadWrite",
+        "lun": 0
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data1')]",
+        "diskSizeGB": 256,
+        "caching": "ReadWrite",
+        "lun": 1
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data2')]",
+        "diskSizeGB": 512,
+        "caching": "ReadOnly",
+        "lun": 2
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data3')]",
+        "diskSizeGB": 512,
+        "caching": "ReadOnly",
+        "lun": 3
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data4')]",
+        "diskSizeGB": 64,
+        "caching": "None",
+        "lun": 4
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data5')]",
+        "diskSizeGB": 256,
+        "caching": "ReadWrite",
+        "lun": 5
+      }
+    ],
+    "DataDiskArray_Large": [
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data0')]",
+        "diskSizeGB": 1024,
+        "caching": "None",
+        "lun": 0
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data1')]",
+        "diskSizeGB": 1024,
+        "caching": "None",
+        "lun": 1
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data2')]",
+        "diskSizeGB": 512,
+        "caching": "ReadOnly",
+        "lun": 2
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data3')]",
+        "diskSizeGB": 512,
+        "caching": "ReadOnly",
+        "lun": 3
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data4')]",
+        "diskSizeGB": 1024,
+        "caching": "None",
+        "lun": 4
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data5')]",
+        "diskSizeGB": 64,
+        "caching": "ReadWrite",
+        "lun": 5
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data6')]",
+        "diskSizeGB": 1024,
+        "caching": "None",
+        "lun": 6
+      },
+      {
+        "name": "[concat(parameters('Prefix'),'-SQL-Data7')]",
+        "diskSizeGB": 1024,
+        "caching": "None",
+        "lun": 8
+      }
+    ],
+
+    "virtualDiskArray": "[variables(concat('virtualDiskConfigurations_', parameters('Environment')))]",
+    "virtualDiskConfigurations_Dev": {
+      "diskGroups": [
+        {
+          "name": "SQL-Data",
+          "disks": [ "1024", "1024", "1024", "1024", "1024", "1024" ],
+          "caching": "ReadOnly",
+          "virtualDisks": [
+            {
+              "name": "SQL-TR-Data",
+              "size": "2048GB",
+              "useMaximumSize": "no",
+              "Interleave": "64KB"
+            },
+            {
+              "name": "SQL-TR-Log",
+              "size": "500GB",
+              "useMaximumSize": "no",
+              "Interleave": "64KB"
+
+            },
+            {
+              "name": "SQL-DW-Data",
+              "size": "2048GB",
+              "useMaximumSize": "no",
+              "Interleave": "256KB"
+
+            },
+            {
+              "name": "SQL-DW-Log",
+              "size": "500GB",
+              "useMaximumSize": "no",
+              "Interleave": "64KB"
+
+            }
+          ]
+        }
+      ]
+    },
+    "virtualDiskConfigurations_Prod": {
+      "diskGroups": [
+        {
+          "name": "SQL-TR-Data",
+          "disks": [ "1024", "1024", "1024", "1024" ],
+          "caching": "ReadOnly",
+          "virtualDisks": [
+            {
+              "name": "SQL-TR-Data",
+              "size": "",
+              "useMaximumSize": "yes",
+              "Interleave": "64KB"
+
+            }
+          ]
+        },
+        {
+          "name": "SQL-TR-Logs",
+          "disks": [ "1024", "1024" ],
+          "caching": "None",
+          "virtualDisks": [
+            {
+              "name": "SQL-TR-Logs",
+              "size": "",
+              "useMaximumSize": "yes",
+              "Interleave": "64KB"
+            }
+          ]
+        },
+        {
+          "name": "SQL-DW-Data",
+          "disks": [ "1024", "1024", "1024", "1024" ],
+          "caching": "ReadOnly",
+          "virtualDisks": [
+            {
+              "name": "SQL-DW-Data",
+              "size": "",
+              "useMaximumSize": "yes",
+              "Interleave": "256KB"
+            }
+          ]
+        },
+        {
+          "name": "SQL-DW-Logs",
+          "disks": [ "1024", "1024" ],
+          "caching": "None",
+          "virtualDisks": [
+            {
+              "name": "SQL-DW-Logs",
+              "size": "",
+              "useMaximumSize": "yes",
+              "Interleave": "64KB"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "disk-vnet",
+      "apiVersion": "2018-08-01",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "vNET",
+        "count": 1
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "192.168.100.0/24"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "default",
+            "properties": {
+              "addressPrefix": "192.168.100.0/24"
+            }
+          }
+        ],
+        "enableDdosProtection": false
+      },
+      "dependsOn": [
+
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(parameters('Prefix'),'-DB',copyIndex(),'-vm-nic')]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "DB-Nic-Copy",
+        "count": 1
+      },
+      "tags": {
+        "displayName": "Database Nic"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig0",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/disks/providers/Microsoft.Network/virtualNetworks/disk-vnet/subnets/default"
+              }
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": []
+        },
+        "enableIPForwarding": false
+      },
+      "dependsOn": [
+        "vNET"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(parameters('Prefix'),'-DB',copyIndex(),'-vm')]",
+      "apiVersion": "2017-03-30",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "DB-VM-Copy",
+        "count": 1
+      },
+      "tags": {
+        "displayName": "Database VM"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_F4s_v2"
+        },
+        "osProfile": {
+          "computerName": "[concat(parameters('Prefix'),'-DB',copyIndex(),'-vm')]",
+          "adminUsername": "lntad",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "enableAutomaticUpdates": true
+          }
+
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat(parameters('Prefix'),'-DB',copyIndex(),'-vm-nic'))]",
+              "properties": {
+                "primary": true
+              }
+            }
+          ]
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "[concat(parameters('Prefix'),'-DB',copyIndex(),'-vm-OSDisk')]",
+            "osType": "Windows",
+            "createOption": "FromImage",
+            "caching": "ReadWrite",
+            "managedDisk": {
+              "storageAccountType": "Premium_LRS"
+            }
+          },
+          "copy": [
+            {
+              "name": "dataDisks",
+              "count": "[length(variables('DataDiskArray'))]",
+              "input": {
+                "name": "[variables('DataDiskArray')[copyIndex('dataDisks')].name]",
+                "createOption": "Empty",
+                "lun": "[variables('DataDiskArray')[copyIndex('dataDisks')].lun]",
+                "caching": "[variables('DataDiskArray')[copyIndex('dataDisks')].caching]",
+                "diskSizeGB": "[variables('DataDiskArray')[copyIndex('dataDisks')].diskSizeGB]",
+                "managedDisk": {
+                  "storageAccountType": "Premium_LRS"
+                }
+              }
+            }
+          ]
+        },
+        "licenseType": "Windows_Server"
+      },
+      "dependsOn": [
+        "DB-Nic-Copy"
+      ]
+    }
+  ],
+  "outputs": {
+    "virtualDiskConfigurations": {
+      "type": "array",
+      "value": "[variables('virtualDiskArray').diskGroups]"
+    }
+  }
+}
