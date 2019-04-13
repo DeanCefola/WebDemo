@@ -3,13 +3,13 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "Prefix": {
-      "value":  "GEN-Prefix"
+      "value": "123"
     },
     "adminPassword": {
-      "value": "GEN-Password"
+     
     },
     "Environment": {
-      "value": "Dev"
+      "value": "Prod"
     },
     "DataBaseSize": {
       "value": "Small"

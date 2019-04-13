@@ -304,9 +304,7 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "[variables('SubnetRef')]"                
-                //"id": "[concat('/subscriptions/',subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/',parameters('Prefix'),'-vnet','/subnets/default')]"
-                //"id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/disks/providers/Microsoft.Network/virtualNetworks/disk-vnet/subnets/default"
+                "id": "[variables('SubnetRef')]"
               }
             }
           }
