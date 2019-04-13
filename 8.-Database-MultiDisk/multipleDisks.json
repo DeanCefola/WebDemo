@@ -1,5 +1,5 @@
 ﻿{
-  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
     "Prefix": {
@@ -32,6 +32,10 @@
     }
   },
   "variables": {
+    "VnetID": "[resourceId('Microsoft.Network/virtualNetworks', concat(parameters('Prefix'),'-vnet'))]",
+    "SubnetName": "default",
+    "SubnetRef": "[concat(variables('VnetID'), '/subnets/', variables('SubnetName'))]",
+
     "DataDiskArray": "[variables(concat('DataDiskArray_', parameters('DataBaseSize')))]",
     "DataDiskArray_Small": [
       {
@@ -254,7 +258,7 @@
   "resources": [
     {
       "type": "Microsoft.Network/virtualNetworks",
-      "name": "disk-vnet",
+      "name": "[concat(parameters('Prefix'),'-vnet')]",
       "apiVersion": "2018-08-01",
       "location": "[resourceGroup().location]",
       "copy": {
@@ -300,7 +304,9 @@
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
               "subnet": {
-                "id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/disks/providers/Microsoft.Network/virtualNetworks/disk-vnet/subnets/default"
+                "id": "[variables('SubnetRef')]"                
+                //"id": "[concat('/subscriptions/',subscription().id,'/resourceGroups/',resourceGroup().name,'/providers/Microsoft.Network/virtualNetworks/',parameters('Prefix'),'-vnet','/subnets/default')]"
+                //"id": "/subscriptions/3a8206a1-e9f3-44a2-84f0-e532b9862258/resourceGroups/disks/providers/Microsoft.Network/virtualNetworks/disk-vnet/subnets/default"
               }
             }
           }
