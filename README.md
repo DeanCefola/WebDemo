@@ -1,6 +1,6 @@
-# WebDemo
+**WebDemo**
 ============================
-  Scale from a single Web Server to a multi-tier application 
+Scale from a single Web Server to a multi-tier application 
   
 
 **Intended to be deployed from Visual Studio**
