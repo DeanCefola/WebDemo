@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
@@ -31,7 +31,7 @@
     }
   },
   "variables": {
-    "fileUris": "https://azureacademydiag597.blob.core.windows.net/demo/AA-Install_IIS.ps1",
+    "fileUris": "https://msdean.blob.core.windows.net/test/AA-Install_IIS.ps1",
     "arguments": " ",
     "UriFileNamePieces": "[split(variables('fileUris'), '/')]",
     "firstFileNameString": "[variables('UriFileNamePieces')[sub(length(variables('UriFileNamePieces')), 1)]]",
