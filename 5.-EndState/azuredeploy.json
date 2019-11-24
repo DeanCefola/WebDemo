@@ -14,7 +14,7 @@
       "metadata": {
         "description": "Auto-generated token to access _artifactsLocation"
       },
-      "default:value": ""
+      "default:value": " "
     },
     "Prefix": {
       "type": "string",
